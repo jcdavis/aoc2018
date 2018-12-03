@@ -15,17 +15,17 @@ fn main() {
     part2(&lines);
 }
 
+fn parse_line(re: &Regex, line: &String) -> (i32, i32, i32, i32, i32) {
+    let mat = re.captures(line).unwrap();
+    return (mat[1].parse().unwrap(), mat[2].parse().unwrap(), mat[3].parse().unwrap(),
+            mat[4].parse().unwrap(),mat[5].parse().unwrap());
+}
 fn part1(lines: &Vec<Result<String>>) {
     let mut arr: [[u16; 2000]; 2000] = [[0; 2000]; 2000];
-    let re = Regex::new(r"#\d+\s+@ (\d+),(\d+): (\d+)x(\d+)").unwrap();
+    let re = Regex::new(r"#(\d+) @ (\d+),(\d+): (\d+)x(\d+)").unwrap();
     for line in lines {
         let l = line.as_ref().unwrap();
-        let mat = re.captures(l).unwrap();
-        let col: i32 = mat[1].parse().unwrap();
-        let row: i32 = mat[2].parse().unwrap();
-        let width: i32 = mat[3].parse().unwrap();
-        let height: i32 = mat[4].parse().unwrap();
-        //println!("{} {} {} {}", row, col, width, height);
+        let (_, col, row, width, height) = parse_line(&re,l);
         for i in row..row+height {
             for j in col..col+width {
                 arr[i as usize][j as usize] += 1;
@@ -50,12 +50,7 @@ fn part2(lines: &Vec<Result<String>>) {
     let mut unoverlapped: HashSet<i32> = HashSet::new();
     for line in lines {
         let l = line.as_ref().unwrap();
-        let mat = re.captures(l).unwrap();
-        let id: i32 = mat[1].parse().unwrap();
-        let col: i32 = mat[2].parse().unwrap();
-        let row: i32 = mat[3].parse().unwrap();
-        let width: i32 = mat[4].parse().unwrap();
-        let height: i32 = mat[5].parse().unwrap();
+        let (id, col, row, width, height) = parse_line(&re, l);
 
         unoverlapped.insert(id);
         for i in row..row + height {
