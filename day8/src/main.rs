@@ -8,14 +8,8 @@ struct TreeNode {
 }
 
 fn part1(node: &TreeNode) -> i32 {
-    let mut total = 0;
-    for child in &node.children {
-        total += part1(child);
-    }
-    for meta in &node.metadata {
-        total += *meta;
-    }
-    total
+    let child_sums: Vec<i32> = node.children.iter().map(|c| part1(c)).collect();
+    child_sums.iter().sum::<i32>() + node.metadata.iter().sum::<i32>()
 }
 
 fn part2(node: &TreeNode) -> i32 {
