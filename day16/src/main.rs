@@ -1,8 +1,10 @@
 extern crate regex;
 
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::iter::FromIterator;
 use regex::{Captures, Regex};
 
 struct TestCase {
@@ -113,13 +115,19 @@ fn match_to_arr(mat: &Captures) -> [i32; 4] {
     [mat[1].parse().unwrap(), mat[2].parse().unwrap(), mat[3].parse().unwrap(), mat[4].parse().unwrap()]
 }
 
+fn lines_from_file(name: &str) -> Vec<String> {
+    let f = File::open(name).unwrap();
+    let br = BufReader::new(f);
+
+    br.lines().map(|x| x.unwrap()).collect()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let f = File::open(&args[1]).unwrap();
-    let br = BufReader::new(f);
     let state_re = Regex::new(r"\w+:\s+\[(\d+), (\d+), (\d+), (\d+)\]").unwrap();
     let op_re = Regex::new(r"(\d+) (\d+) (\d+) (\d+)").unwrap();
-    let mut iter = br.lines().map(|x| x.unwrap()).peekable();
+    let lines = lines_from_file(&args[1]);
+    let mut iter = lines.iter().peekable();
     let mut cases: Vec<TestCase> = Vec::new();
 
     while iter.peek().is_some() {
@@ -136,17 +144,48 @@ fn main() {
 
     let ops: Vec<&Op> = vec![&addr, &addi, &mulr, &muli, &banr, &bani, &borr, &bori, &setr, &seti, &gtir, &gtri, &gtrr, &eqir, &eqri, &eqrr];
 
-    let mut three_or_more = 0;
+    let mut candidates: HashMap<usize, HashSet<usize>> = HashMap::new();
+
+    for i in 0..ops.len() {
+        candidates.insert(i, HashSet::from_iter(0..ops.len()));
+    }
+
     for case in &cases {
-        let mut count = 0;
-        for op in &ops {
-            if op(case.before, case.opcodes) == case.after {
-                count += 1;
+        for i in 0..ops.len() {
+            if ops[i](case.before, case.opcodes) != case.after {
+                candidates.get_mut(&(case.opcodes[0] as usize)).map(|set| set.remove(&i));
             }
         }
-        if count >= 3 {
-            three_or_more += 1;
+    }
+
+    let mut mappings: HashMap<usize, usize> = HashMap::new();
+
+    loop {
+        let mut found = 1000;
+
+        for (op, ids) in &candidates {
+            if ids.len() == 1 {
+                found = *op;
+                break;
+            }
+        }
+        if found == 1000 {
+            break;
+        }
+        let from = *candidates.get(&found).unwrap().iter().next().unwrap();
+        mappings.insert(found, from);
+
+        for (_, ids) in candidates.iter_mut() {
+            ids.remove(&from);
         }
     }
-    println!("{}", three_or_more);
+    let command_lines = lines_from_file(&args[2]);
+
+    let mut state = [0; 4];
+    for line in &command_lines {
+        let op_bytes = match_to_arr(&op_re.captures(line).unwrap());
+
+        state = ops[*mappings.get(&(op_bytes[0] as usize)).unwrap()](state, op_bytes);
+    }
+    println!("{}", state[0]);
 }
